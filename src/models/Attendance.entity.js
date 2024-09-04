@@ -89,8 +89,9 @@ class Attendance {
   }
   async updateDevoteeCount(counseleeId, eventId, declaredCount) {
     try {
+      console.log(counseleeId, eventId, declaredCount);
       const query = `INSERT INTO public.counselee_prasadam("counseleeId", "eventId","declaredCount")
-                     VALUES($1, $2, $4)
+                     VALUES($1, $2, $3)
                      RETURNING *;`; // Optional: RETURNING * to get the inserted record
       const values = [counseleeId, eventId, declaredCount];
       const result = await pool.query(query, values);

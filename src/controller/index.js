@@ -195,12 +195,17 @@ exports.initiUpdateCounselee = async function (req, res) {
 exports.getEntry = async function (req, res) {
   try {
     const { counseleeId, eventId } = req.query;
+    const counselor = await new Attendance().findCounseleeById(counseleeId);
     const getExistingRecord = await new Attendance().findRecordById(
       counseleeId,
       eventId
     );
-    console.log(getExistingRecord);
-    return res.code(200).send({ data: getExistingRecord.rows[0] });
+    const sendingdata = {
+      ...getExistingRecord.rows[0],
+      firstName: counselor.rows[0].firstName,
+      lastName: counselor.rows[0].lastName,
+    };
+    return res.code(200).send({ data: sendingdata });
   } catch (error) {
     return res.code(500).send({ message: error.message });
   }

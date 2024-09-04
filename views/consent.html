@@ -278,9 +278,9 @@
           if (response.ok) {
             const responseData = await response.json();
 
-            document.getElementById(
-              "user-data-text"
-            ).innerText = ` recieved count = ${
+            document.getElementById("user-data-text").innerText = `name = ${
+              responseData.data.firstName
+            } ${responseData.data.lastName} \n recieved count = ${
               responseData.data.recievedCount
             } outof declared count = ${
               responseData.data.declaredCount
