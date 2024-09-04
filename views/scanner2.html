@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body data-rsssl="1">
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"
+      integrity="sha512-k/KAe4Yff9EUdYI5/IAHlwUswqeipP+Cp5qnrsUjTPCgl51La2/JhyyjNciztD7mWNKLSXci48m7cctATKfLlQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <style>
+      main {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      #reader {
+        width: 600px;
+      }
+      #result {
+        text-align: center;
+        font-size: 1.5rem;
+      }
+      #logout-container {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 20px;
+      }
+      #logout-button {
+        background-color: rgba(51, 51, 51, 0.05);
+        border-radius: 8px;
+        border-width: 0;
+        color: #333333;
+        cursor: pointer;
+        display: inline-block;
+        font-family: "Haas Grot Text R Web", "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+        font-size: 20px;
+        font-weight: 500;
+        margin: 0;
+        padding: 10px 12px;
+
+        touch-action: manipulation;
+      }
+    </style>
+    <main>
+      <div id="logout-container">
+        <button id="logout-button" onclick="logout()">Logout</button>
+      </div>
+      <div id="reader"></div>
+      <div id="result"></div>
+    </main>
+    <script>
+      const user = JSON.parse(localStorage.getItem("authenticatedUser"));
+      if (!user) {
+        window.location.href = "/login";
+      }
+      const scanner = new Html5QrcodeScanner("reader", {
+        qrbox: {
+          width: 250,
+          height: 250,
+        },
+        fps: 20,
+      });
+      scanner.render(success, error);
+      function success(result) {
+        const counselee = JSON.parse(result).ID;
+        const event = JSON.parse(result).event;
+        handleSubmitData(counselee, event);
+        //         document.getElementById("result").innerHTML = `
+        // <h2>Success!</h2>
+        // <p>${result}</p>
+        // `;
+        //         scanner.clear();
+        //         document.getElementById("reader").remove();
+      }
+      function error(err) {
+        console.error(err);
+      }
+      async function handleSubmitData(counselee, event) {
+        const headers = new Headers();
+        headers.append("Content-Type", "application/json");
+        try {
+          const formData = { counseleeId: counselee, eventId: event };
+          const response = await fetch(`/record`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(formData),
+          });
+          if (response.ok) {
+            const responseData = await response.json();
+            document.getElementById("success").innerText = responseData.message;
+          } else {
+            if (response.status === 409) {
+              window.location.href = `/consent?counselee=${counselee}&event=${event}`;
+            }
+            const responseData = await response.json();
+            console.log(responseData.message);
+          }
+        } catch (error) {
+          console.log(error.message);
+        }
+      }
+      function logout() {
+        localStorage.removeItem("authenticatedUser");
+        window.location.href = "/login";
+      }
+    </script>
+  </body>
+</html>

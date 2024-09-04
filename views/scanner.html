@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QR Code Scanner</title>
+    <script
+      src="https://unpkg.com/html5-qrcode"
+      type="text/javascript"
+    ></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f4f4f4;
+      }
+
+      .login-container,
+      #qr-scanner {
+        background-color: #fff;
+        padding: 40px;
+        border-radius: 8px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        width: 350px;
+      }
+
+      .login-container h2,
+      #qr-scanner h2 {
+        text-align: center;
+        margin-bottom: 30px;
+        font-weight: 500;
+        color: #333;
+      }
+
+      .input-group {
+        margin-bottom: 20px;
+      }
+
+      .input-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #555;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        color: #333;
+        box-sizing: border-box;
+      }
+
+      .input-group input:focus {
+        border-color: #007bff;
+        outline: none;
+      }
+
+      .login-container button,
+      #result-modal button {
+        width: 100%;
+        padding: 10px;
+        background-color: #007bff;
+        border: none;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      .login-container button:hover,
+      #result-modal button:hover {
+        background-color: #0056b3;
+      }
+
+      .login-container .forgot-password {
+        text-align: center;
+        margin-top: 15px;
+      }
+
+      .login-container .forgot-password a {
+        text-decoration: none;
+        color: #007bff;
+        font-size: 14px;
+      }
+
+      .login-container .forgot-password a:hover {
+        text-decoration: underline;
+      }
+
+      #qr-scanner {
+        display: none;
+      }
+
+      #result-modal {
+        display: none;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 300px;
+        z-index: 1000;
+        text-align: center;
+      }
+
+      #result-modal.active {
+        display: block;
+      }
+
+      #qr-scanner.active {
+        display: block;
+      }
+
+      #result-modal button {
+        margin-top: 10px;
+        padding: 5px 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="login-container" id="login-form">
+      <h2>Login</h2>
+      <div class="input-group">
+        <label for="phoneNumber">Phone Number</label>
+        <input
+          type="tel"
+          id="phoneNumber"
+          placeholder="Enter your phone number"
+          required
+        />
+      </div>
+      <div class="input-group">
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          placeholder="Enter your password"
+          required
+        />
+      </div>
+      <button onclick="login()">Login</button>
+    </div>
+
+    <div id="qr-scanner">
+      <h2
+        id="success"
+        style="text-align: center; color: green; background-color: lightgreen"
+      ></h2>
+      <h2>Scan QR Code</h2>
+      <div id="qr-reader" style="width: 100%"></div>
+      <p id="scan-result"></p>
+
+      <h2>Or Upload QR Code Image</h2>
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid lightgray;
+          padding: 5px;
+        "
+      >
+        <input
+          type="file"
+          id="qr-file-input"
+          accept="image/*"
+          onchange="handleFileUpload(event)"
+        />
+      </div>
+    </div>
+
+    <div id="result-modal">
+      <p id="modal-text"></p>
+      <button onclick="confirmEntry()">Yes</button>
+      <button onclick="closeModal()">No</button>
+    </div>
+
+    <script>
+      const user = JSON.parse(localStorage.getItem("authenticatedUser"));
+      if (user) {
+        document.getElementById("login-form").style.display = "none";
+        document.getElementById("qr-scanner").classList.add("active");
+        startQRScanner();
+      }
+      async function login() {
+        const phoneNumber = document.getElementById("phoneNumber").value;
+        const password = document.getElementById("password").value;
+        const headers = new Headers();
+        headers.append("Content-Type", "application/json");
+        const response = await fetch(`/authenticate`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            phoneNumber: phoneNumber,
+            password: password,
+          }),
+        });
+        if (response.ok) {
+          const responseData = await response.json();
+          document.getElementById("login-form").style.display = "none";
+          document.getElementById("qr-scanner").classList.add("active");
+          startQRScanner();
+          localStorage.setItem(
+            "authenticatedUser",
+            JSON.stringify(responseData)
+          );
+          return {
+            message: "Authenticated",
+            username: responseData.user_name,
+            authenticated: true,
+          };
+        } else {
+          const responseData = await response.json();
+          alert("Invalid phone number or password");
+          throw { message: responseData.message, authenticated: false };
+        }
+      }
+
+      function startQRScanner() {
+        // const qrReader = new Html5Qrcode("qr-reader");
+        // qrReader
+        //   .start(
+        //     { facingMode: "environment" }, // Rear camera
+        //     { fps: 10, qrbox: 250 },
+        //     (decodedText) => {
+        //       document.getElementById(
+        //         "scan-result"
+        //       ).innerText = `Scanned: ${decodedText}`;
+        //       checkEntry(decodedText);
+        //     },
+        //     (errorMessage) => {
+        //       console.log(`QR Code no match found: ${errorMessage}`);
+        //     }
+        //   )
+        //   .catch((err) => {
+        //     console.log(`Unable to start scanning: ${err}`);
+        //   });
+      }
+
+      async function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+          const qrReader = new Html5Qrcode("qr-reader");
+          qrReader
+            .scanFile(file, true)
+            .then(async (decodedText) => {
+              const event = JSON.parse(decodedText).event;
+              const id = JSON.parse(decodedText).ID;
+              document.getElementById("scan-result").innerText = `Name: ${
+                JSON.parse(decodedText).name
+              }`;
+              checkEntry(decodedText);
+              await handleSubmitData(id, event);
+            })
+            .catch((err) => {
+              console.error(`Error scanning file: ${err}`);
+            });
+        }
+      }
+
+      async function handleSubmitData(counselee, event) {
+        console.log(counselee, event);
+        const headers = new Headers();
+        headers.append("Content-Type", "application/json");
+        try {
+          const formData = { counseleeId: counselee, eventId: event };
+          const response = await fetch(`/record`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(formData),
+          });
+          if (response.ok) {
+            const responseData = await response.json();
+            document.getElementById("success").innerText = responseData.message;
+          } else {
+            if (response.status === 409) {
+              window.location.href = `/consent?counselee=${counselee}&event=${event}`;
+            }
+            const responseData = await response.json();
+            console.log(responseData.message);
+          }
+        } catch (error) {
+          console.log(error.message);
+        }
+      }
+
+      function checkEntry(data) {
+        // Replace with your API call to check if the entry exists
+        const entryExists = true; // Assume entry exists for demonstration
+
+        if (entryExists) {
+          document.getElementById("modal-text").innerText =
+            "Entry already exists. Allow another entry?";
+          document.getElementById("result-modal").classList.add("active");
+        } else {
+          alert("Entry added successfully.");
+          // Logic to add the entry
+        }
+      }
+
+      function confirmEntry() {
+        alert("Another entry added successfully.");
+        closeModal();
+      }
+
+      function closeModal() {
+        document.getElementById("result-modal").classList.remove("active");
+      }
+    </script>
+  </body>
+</html>

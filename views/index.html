@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Program Name</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 50px;
+        text-align: center;
+        background-color: #f4f4f4;
+      }
+      h1 {
+        color: rgb(31 41 55);
+        font-family: system-ui, -apple-system, system-ui, "Helvetica Neue",
+          Helvetica, Arial, sans-serif;
+      }
+      form {
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      input[type="text"] {
+        padding: 10px;
+        width: 300px;
+        font-size: 16px;
+      }
+
+      #barcode {
+        margin-top: 30px;
+        display: flex;
+        justify-content: center;
+      }
+      .error {
+        color: red;
+        margin-top: 20px;
+        font-size: larger;
+      }
+      .loader {
+        border: 6px solid #f3f3f3;
+        border-top: 6px solid #3498db;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+        display: none;
+      }
+      .phoneForm_label {
+        font-family: system-ui, -apple-system, system-ui, "Helvetica Neue",
+          Helvetica, Arial, sans-serif;
+        font-weight: 700;
+        color: rgb(15 118 110);
+      }
+      .phoneForm_inner_div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+      }
+
+      /* CSS */
+      button {
+        align-items: center;
+        background-clip: padding-box;
+        background-color: #fa6400;
+        border: 1px solid transparent;
+        border-radius: 0.25rem;
+        box-shadow: rgba(0, 0, 0, 0.02) 0 1px 3px 0;
+        box-sizing: border-box;
+        color: #fff;
+        cursor: pointer;
+        display: inline-flex;
+        font-family: system-ui, -apple-system, system-ui, "Helvetica Neue",
+          Helvetica, Arial, sans-serif;
+        font-size: 16px;
+        font-weight: 600;
+        justify-content: center;
+        line-height: 1.25;
+        margin: 0;
+        min-height: 3rem;
+        padding: calc(0.875rem - 1px) calc(1.5rem - 1px);
+        position: relative;
+        text-decoration: none;
+        transition: all 250ms;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+        vertical-align: baseline;
+        width: auto;
+      }
+
+      button:hover,
+      button:focus {
+        background-color: #fb8332;
+        box-shadow: rgba(0, 0, 0, 0.1) 0 4px 12px;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      button:active {
+        background-color: #c85000;
+        box-shadow: rgba(0, 0, 0, 0.06) 0 2px 4px;
+        transform: translateY(0);
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="program_name">Program Name</h1>
+
+    <form id="phoneForm">
+      <div class="phoneForm_inner_div">
+        <label for="phoneNumber" class="phoneForm_label">
+          Enter Your Phone Number
+        </label>
+        <input
+          type="text"
+          id="phoneNumber"
+          placeholder="Enter phone number"
+          required
+        />
+      </div>
+      <button type="submit">Get Barcode</button>
+    </form>
+
+    <div class="loader" id="loader"></div>
+
+    <div id="barcode"></div>
+
+    <p id="user-info"></p>
+
+    <div class="error" id="error"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        const programNameDiv = document.getElementById("program_name");
+        const param = window.location.pathname.split("/")[1];
+        try {
+          programNameDiv.textContent = "Loading...";
+
+          const response = await fetch(`/event/${param}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+
+          const data = await response.json();
+
+          if (data) {
+            programNameDiv.textContent = data.name;
+
+            // Dynamically change the title of the page
+            document.title = `Program: ${data.name}`;
+          } else {
+            programNameDiv.textContent = "Program name not found.";
+          }
+        } catch (error) {
+          console.error("Error fetching program name:", error);
+          programNameDiv.textContent =
+            "Failed to load program name. Please try again.";
+        }
+      });
+    </script>
+    <script>
+      const form = document.getElementById("phoneForm");
+      const phoneNumberInput = document.getElementById("phoneNumber");
+      const barcodeDiv = document.getElementById("barcode");
+      const errorDiv = document.getElementById("error");
+      const loader = document.getElementById("loader");
+      const user_info = document.getElementById("user-info");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        // Clear previous outputs
+        barcodeDiv.innerHTML = "";
+        errorDiv.textContent = "";
+        user_info.textContent = "";
+
+        const phoneNumber = phoneNumberInput.value.trim();
+
+        if (!phoneNumber) {
+          errorDiv.textContent = "Please enter a valid phone number.";
+          return;
+        }
+
+        try {
+          loader.style.display = "block";
+
+          const response = await fetch(`/barcode`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ phoneNumber }),
+          });
+
+          if (!response.ok) {
+            const responseData = await response.json();
+            throw new Error(
+              responseData.message || "Network response was not ok"
+            );
+          }
+
+          const data = await response.json();
+          const param = window.location.pathname.split("/")[1];
+          if (data) {
+            // Create barcode data string
+            const barcodeData = JSON.stringify({
+              name: `${data.firstName} ${data.lastName}`,
+              ID: data.id,
+              event: param,
+              Phone: data.phoneNumber,
+            });
+
+            // Generate the QR code
+            const qrCode = new QRCode(barcodeDiv, {
+              text: barcodeData,
+              width: 208,
+              height: 208,
+              colorDark: "#000000",
+              colorLight: "#ffffff",
+            });
+
+            user_info.textContent = `${data.firstName} ${data.lastName}`;
+          } else {
+            errorDiv.textContent = "User details not found.";
+          }
+        } catch (error) {
+          console.error("Error fetching user details:", error);
+          errorDiv.textContent =
+            error.message ||
+            "An error occurred while fetching user details. Please try again.";
+        } finally {
+          loader.style.display = "none";
+        }
+      });
+    </script>
+  </body>
+</html>
