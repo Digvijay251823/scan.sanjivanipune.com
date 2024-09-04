@@ -18,6 +18,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
+        height: 100vh;
       }
       #reader {
         width: 600px;
@@ -96,6 +97,7 @@
           if (response.ok) {
             const responseData = await response.json();
             document.getElementById("success").innerText = responseData.message;
+            window.location.href = `/success?counselee=${counselee}&event=${event}`;
           } else {
             if (response.status === 409) {
               window.location.href = `/consent?counselee=${counselee}&event=${event}`;
@@ -111,6 +113,16 @@
         localStorage.removeItem("authenticatedUser");
         window.location.href = "/login";
       }
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          // The user has switched to another tab or minimized the window
+          scanner.clear();
+          // Perform your desired action here
+        } else {
+          // The user has returned to the tab
+          scanner.render(success, error);
+        }
+      });
     </script>
   </body>
 </html>

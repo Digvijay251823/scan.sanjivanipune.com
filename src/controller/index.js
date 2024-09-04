@@ -2,8 +2,6 @@ const {
   storeUserService,
   getUserService,
   getEventById,
-  storeUserAttendanceService,
-  updateUserAttendanceService,
 } = require("../service");
 const path = require("path");
 const fs = require("fs");
@@ -22,8 +20,8 @@ exports.storeUser = async function (req, res) {
 };
 
 exports.getUserWithPhone = async function (req, res) {
-  const { phoneNumber } = req.body;
-  return await getUserService(phoneNumber);
+  const { phoneNumber, declaredCount } = req.body;
+  return await getUserService(phoneNumber, declaredCount);
 };
 
 exports.getUser = async function (req, res) {
@@ -38,6 +36,11 @@ exports.getScanner = async function (req, res) {
 };
 exports.getLogin = async function (req, res) {
   const filePath = path.join(__dirname, "../../", "views", "login.html");
+  const htmlContent = fs.readFileSync(filePath, "utf-8");
+  res.type("text/html").send(htmlContent);
+};
+exports.getSuccess = async function (req, res) {
+  const filePath = path.join(__dirname, "../../", "views", "success.html");
   const htmlContent = fs.readFileSync(filePath, "utf-8");
   res.type("text/html").send(htmlContent);
 };
@@ -134,6 +137,72 @@ exports.updateUserAttendance = async function (req, res) {
     if (client) {
       client.release();
     }
+  }
+};
+exports.initiUpdateCounselee = async function (req, res) {
+  const { counseleeId, eventId, declaredCount } = req.body;
+
+  let client;
+  try {
+    client = await pool.connect();
+    if (!declaredCount) {
+      return res.code(400).send({ message: "declared count is required" });
+    }
+    if (!counseleeId || !eventId || !declaredCount) {
+      return res.code(400).send({ message: "data is invalid" });
+    }
+    const event = await new Event().getEventById(eventId);
+    if (event.rows.length <= 0) {
+      return res.code(400).send({ message: "event not found" });
+    }
+
+    const counselee = await new Attendance().findCounseleeById(counseleeId);
+
+    if (counselee.rows.length <= 0) {
+      return res.code(400).send({ message: "Counselee not found" });
+    }
+
+    const getExistingRecord = await new Attendance().findRecordById(
+      counseleeId,
+      eventId
+    );
+
+    if (getExistingRecord.rows.length <= 0) {
+      const getExistingRecord = await new Attendance().updateDevoteeCount(
+        counseleeId,
+        eventId,
+        declaredCount
+      );
+      return res.code(200).send({
+        message: "registered",
+        data: getExistingRecord.rows[0],
+      });
+    }
+
+    return res.code(200).send({
+      message: "updated",
+      data: getExistingRecord.rows[0],
+    });
+  } catch (error) {
+    throw error;
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+};
+
+exports.getEntry = async function (req, res) {
+  try {
+    const { counseleeId, eventId } = req.query;
+    const getExistingRecord = await new Attendance().findRecordById(
+      counseleeId,
+      eventId
+    );
+    console.log(getExistingRecord);
+    return res.code(200).send({ data: getExistingRecord.rows[0] });
+  } catch (error) {
+    return res.code(500).send({ message: error.message });
   }
 };
 

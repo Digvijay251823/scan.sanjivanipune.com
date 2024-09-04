@@ -40,7 +40,7 @@ exports.storeUserService = async function (formData) {
   }
 };
 
-exports.getUserService = async function (phoneNumber) {
+exports.getUserService = async function (phoneNumber, declaredCount) {
   let client;
   try {
     client = await pool.connect();
@@ -51,7 +51,6 @@ exports.getUserService = async function (phoneNumber) {
     } else {
       throw new Error("Counselee not found");
     }
-    // return { something: "this is the response", formData };
   } catch (error) {
     throw new Error(error.message || error.title);
   } finally {
@@ -83,3 +82,5 @@ exports.getEventById = async function (id) {
     }
   }
 };
+
+exports.devoteeDetails = async function (id, eventId, declaredCount) {};

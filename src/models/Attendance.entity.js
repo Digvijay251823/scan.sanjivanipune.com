@@ -32,6 +32,7 @@ class Attendance {
                      WHERE "counseleeId" = $1 AND "eventId" = $2;`;
       const values = [counselee, event];
       const result = await pool.query(query, values);
+
       return result; // or result if you need other metadata like rowCount
     } catch (error) {
       throw { error: error.message };
@@ -80,6 +81,18 @@ class Attendance {
                      WHERE "counseleeId" = $1 AND "eventId" = $2
                      RETURNING *;`; // Optional: RETURNING * to get the updated record
       const values = [counseleeId, eventId, receivedCount];
+      const result = await pool.query(query, values);
+      return result; // Return the updated record
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+  async updateDevoteeCount(counseleeId, eventId, declaredCount) {
+    try {
+      const query = `INSERT INTO public.counselee_prasadam("counseleeId", "eventId","declaredCount")
+                     VALUES($1, $2, $4)
+                     RETURNING *;`; // Optional: RETURNING * to get the inserted record
+      const values = [counseleeId, eventId, declaredCount];
       const result = await pool.query(query, values);
       return result; // Return the updated record
     } catch (error) {

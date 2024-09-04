@@ -93,6 +93,12 @@
         width: auto;
       }
 
+      #declaredCount {
+        width: 300px;
+        padding: 10px;
+        font-size: 16px;
+      }
+
       button:hover,
       button:focus {
         background-color: #fb8332;
@@ -108,6 +114,24 @@
         box-shadow: rgba(0, 0, 0, 0.06) 0 2px 4px;
         transform: translateY(0);
       }
+
+      #error-message {
+        display: none;
+        background-color: #fce4e4;
+        border: 1px solid #fcc2c3;
+        float: left;
+        padding: 20px 30px;
+        margin-top: 20px;
+      }
+
+      #error-text {
+        color: #cc0033;
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 13px;
+        font-weight: bold;
+        line-height: 20px;
+        text-shadow: 1px 1px rgba(250, 250, 250, 0.3);
+      }
       @keyframes spin {
         0% {
           transform: rotate(0deg);
@@ -120,7 +144,9 @@
   </head>
   <body>
     <h1 id="program_name">Program Name</h1>
-
+    <div id="error-message">
+      <span id="error-text"></span>
+    </div>
     <form id="phoneForm">
       <div class="phoneForm_inner_div">
         <label for="phoneNumber" class="phoneForm_label">
@@ -131,6 +157,15 @@
           id="phoneNumber"
           placeholder="Enter phone number"
           required
+        />
+      </div>
+      <div class="phoneForm_inner_div">
+        <label for="declaredCount" class="phoneForm_label">Declare Count</label>
+        <input
+          type="number"
+          id="declaredCount"
+          required
+          placeholder="Declare The Count"
         />
       </div>
       <button type="submit">Get Barcode</button>
@@ -182,6 +217,7 @@
     <script>
       const form = document.getElementById("phoneForm");
       const phoneNumberInput = document.getElementById("phoneNumber");
+      const declaredCountInput = document.getElementById("declaredCount");
       const barcodeDiv = document.getElementById("barcode");
       const errorDiv = document.getElementById("error");
       const loader = document.getElementById("loader");
@@ -196,6 +232,7 @@
         user_info.textContent = "";
 
         const phoneNumber = phoneNumberInput.value.trim();
+        const declaredCount = declaredCountInput.value.trim();
 
         if (!phoneNumber) {
           errorDiv.textContent = "Please enter a valid phone number.";
@@ -210,7 +247,7 @@
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ phoneNumber }),
+            body: JSON.stringify({ phoneNumber: phoneNumber }),
           });
 
           if (!response.ok) {
@@ -222,6 +259,11 @@
 
           const data = await response.json();
           const param = window.location.pathname.split("/")[1];
+          const updatedDetails = await updateDetails(
+            data.id,
+            param,
+            declaredCount
+          );
           if (data) {
             // Create barcode data string
             const barcodeData = JSON.stringify({
@@ -229,6 +271,7 @@
               ID: data.id,
               event: param,
               Phone: data.phoneNumber,
+              updatedDetails,
             });
 
             // Generate the QR code
@@ -240,7 +283,7 @@
               colorLight: "#ffffff",
             });
 
-            user_info.textContent = `${data.firstName} ${data.lastName}`;
+            user_info.textContent = `your data has been saved`;
           } else {
             errorDiv.textContent = "User details not found.";
           }
@@ -253,6 +296,31 @@
           loader.style.display = "none";
         }
       });
+      async function updateDetails(counseleeId, eventId, declaredCount) {
+        try {
+          const response = await fetch(`/initupdate`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ counseleeId, eventId, declaredCount }),
+          });
+          if (response.ok) {
+            const responseData = await response.json();
+
+            return responseData?.data;
+          } else {
+            const responseData = await response.json();
+            document.getElementById("error-text").textContent =
+              responseData.message;
+            return;
+          }
+        } catch (error) {
+          document.getElementById("error-text").textContent = error.message;
+          console.log(error);
+          return;
+        }
+      }
     </script>
   </body>
 </html>
